@@ -4,3 +4,5 @@ pandas
 tiktoken
 transformers
 psutil
+pillow
+datasets

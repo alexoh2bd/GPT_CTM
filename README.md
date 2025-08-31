@@ -1,9 +1,19 @@
 GPT
 ==============================
 
-GPT from scratch
+GPT from scratch. 
+Followed Andrej Karpathy's [video](https://www.youtube.com/watch?v=l8pRSuU81PU&t=1841s&ab_channel=AndrejKarpathy) where he trains GPT 2 from scratch.
+
+Inspired by Sakana AI's research paper on [Continuous Thought Machines](https://arxiv.org/abs/2505.05522). 
+
+
+
+Pulled pre-trained GPT2 weights from Huggingface
 
 Project Organization
+
+
+
 ------------
 
 ```
