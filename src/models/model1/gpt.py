@@ -35,7 +35,6 @@ class attn(nn.Module):
 
         # Flash scaled dot product attention
         att = F.scaled_dot_product_attention(q, k, v, is_causal=True)
-
         # Articulated scaled dot product self-attention for practice
         # att = q @ k.transpose(-2, -1) / (n_embd**-0.5)
         # att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float("-inf"))
@@ -80,16 +79,18 @@ class Block(nn.Module):
 class GPT(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.config = config
+        self.args = config
+        self.vocab_size = 50257
+        self.block_size = 1024
         self.transformer = nn.ModuleDict(
             dict(
-                wte=nn.Embedding(config.vocab_size, config.n_embd),
-                wpe=nn.Embedding(config.block_size, config.n_embd),
+                wte=nn.Embedding(self.vocab_size, config.n_embd),
+                wpe=nn.Embedding(self.block_size, config.n_embd),
                 h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
                 ln_f=nn.LayerNorm(config.n_embd),
             )
         )  # B, T, C
-        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.n_embd, self.vocab_size, bias=False)
         self.transformer.wte.weight = self.lm_head.weight
         self.apply(self._init_weights)
 
@@ -98,7 +99,7 @@ class GPT(nn.Module):
         if isinstance(module, nn.Linear):
             std = 0.02
             if hasattr(module, "NANOGPT_SCALE_INIT"):
-                std *= (2 * self.config.n_layer) ** -0.5
+                std *= (2 * self.args.n_layer) ** -0.5
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
@@ -108,8 +109,8 @@ class GPT(nn.Module):
     def forward(self, x, targets=None):
         B, T = x.size()
         assert (
-            T <= self.config.block_size
-        ), f"Cannot forward sequence length {T}, T {T} < block size {self.config.block_size}"
+            T <= self.args.block_size
+        ), f"Cannot forward sequence length {T}, T {T} < block size {self.args.block_size}"
         tok_enc = self.transformer.wte(x)
         pos = torch.arange(0, T, dtype=torch.long, device=x.device)  # shape (T)
         pos_enc = self.transformer.wpe(pos)
@@ -152,11 +153,11 @@ class GPT(nn.Module):
         return optimizer
 
     @classmethod
-    def from_pretrained(cls, model_type):
+    def from_pretrained(cls, model_type, args):
         """Loads pretrained GPT-2 model weights from huggingface"""
         assert model_type in {"gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"}
 
-        print("loading weights from pretrained gpt: %s" % model_type)
+        print("Loading weights from pretrained gpt: %s" % model_type)
 
         # n_layer, n_head and n_embd are determined from model_type
         model_args = {
@@ -169,8 +170,8 @@ class GPT(nn.Module):
         model_args["vocab_size"] = 50257  # always 50257 for GPT model checkpoints
         model_args["block_size"] = 1024  # always 1024 for GPT model checkpoints
         # create a from-scratch initialized minGPT model
-        config = GPTConfig(**model_args)
-        model = GPT(config)
+        # config = GPTConfig(**model_args)
+        model = GPT(args)
         sd = model.state_dict()
         sd_keys = sd.keys()
         sd_keys = [
@@ -182,6 +183,7 @@ class GPT(nn.Module):
         sd_hf = model_hf.state_dict()
         # copy while ensuring all of the parameters are aligned and match in names and shapes
         sd_keys_hf = sd_hf.keys()
+        # print(sd_hf.shape, sd_keys_hf.shape)
 
         sd_keys_hf = [
             k for k in sd_keys_hf if not k.endswith(".attn.masked_bias")
@@ -211,8 +213,46 @@ class GPT(nn.Module):
                     sd[k].copy_(sd_hf[k].t())
             else:
                 # vanilla copy over the other parameters
-                assert sd_hf[k].shape == sd[k].shape
+                assert (
+                    sd_hf[k].shape == sd[k].shape
+                ), f"{k}, {sd_hf[k].shape}, {sd[k].shape}"
                 with torch.no_grad():
                     sd[k].copy_(sd_hf[k])
         print("Pulled Pretrained Weights from HuggingFace")
         return model
+
+    @torch.no_grad()
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
+        """
+        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
+        the sequence max_new_tokens times, feeding the predictions back into the model each time.
+        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
+        """
+        self.eval()  # Set the model to evaluation mode
+        for _ in range(max_new_tokens):
+            # if the sequence context is growing too long we must crop it at block_size
+            idx_cond = (
+                idx
+                if idx.size(1) <= self.args.block_size
+                else idx[:, -self.args.block_size :]
+            )
+            # forward the model to get the logits for the index in the sequence
+            logits, _, _ = self(idx_cond, targets=None)
+            # pluck the logits at the final step and scale by desired temperature
+            # Handle batch dimension expansion - take only first batch element
+            logits = (
+                logits[0:1, -1, :] / temperature
+            )  # Keep batch dim=1 consistent with idx
+            # optionally crop the logits to only the top k options
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float("Inf")
+            # apply softmax to convert logits to (normalized) probabilities
+            probs = F.softmax(logits, dim=-1)
+            # sample from the distribution
+            idx_next = torch.multinomial(probs, num_samples=1)
+            # append sampled index to the running sequence and continue
+            idx = torch.cat((idx, idx_next), dim=1)
+
+        self.train()  # Set the model back to training mode
+        return idx

@@ -276,7 +276,7 @@ class ContinuousThoughtMachine(nn.Module):
         self.kv_features = self.backbone(initial_rgb)
         pos_emb = self.positional_embedding(self.kv_features)
         combined_features = (self.kv_features + pos_emb).flatten(2).transpose(1, 2)
-        kv = self.kv_proj(combined_features)
+        kv = self._(combined_features)
         return kv
 
     def compute_certainty(self, current_prediction):

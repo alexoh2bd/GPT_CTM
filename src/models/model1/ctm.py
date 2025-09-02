@@ -1,13 +1,10 @@
 import torch
+from torch.fx.experimental.symbolic_shapes import StatefulSymbolicContext
 import torch.nn as nn
 from torch.nn import functional as F
 import numpy as np
-from config import GPTConfig
-from tqdm import tqdm
 
-# from train import DL
-
-from gpt import GPT
+# import tiktoken
 
 
 class SynapseUNet(nn.Module):
@@ -156,62 +153,75 @@ class NLM(nn.Module):
 
 # Continuous Thought Model
 class CTM(nn.Module):
-    def __init__(self, config):
+    def __init__(self, args):
         super().__init__()
-        self.config = config
-        self.iterations = 20
+        self.args = args
+        self.iterations = args.iterations  # Number of CTM iterations (e.g., 20)
+        self.vocab_size = args.vocab_size
+        self.device = args.device
 
-        self.device = config.device
+        # Core dimensions
+        self.d_model = args.n_embd  # Model dimension (e.g., 768 for GPT-2)
+        self.memory_length = args.memory_length  # Memory sequence length (e.g., 16)
+        self.hidden_dims = args.hidden_dimensions  # Hidden dims for NLM (e.g., 4)
+        self.dropout = args.dropout
+        self.heads = args.n_head  # Number of attention heads (e.g., 12)
+        self.out_dims = self.d_model  # Output dims = model dims
 
-        self.d_model = config.n_embd
-        self.memory_length = 25
-        self.hidden_dims = 4  # Memory hidden dims x
-        self.dropout = 0.1
-        self.heads = 4
-        self.out_dims = self.d_model  # equal to model dimensions
-
-        # Synapse lvl for each neuron
-        # Pre-activations R DxM
+        # Synapse Network: Processes concatenated sync + attention features
+        # Input: (B*T, d_model + d_model) -> (B*T, d_model)
+        # Where sync_action: (B*T, d_model), kv: (B*T, d_model)
         self.synapse_depth = 2
-        self.synnet = SynapseUNet(out_dims=config.n_embd, depth=self.synapse_depth)
-        # Input: post-activation states and Attention output
-        # Output: Pre-activations
+        # SynapseUNet input: (B*T, 2*d_model, 1) -> output: (B*T, d_model, 1)
+        self.synnet = SynapseUNet(out_dims=args.n_embd, depth=self.synapse_depth)
 
-        # Neuron lvl
-        # Each neuron {1 ... D} is given privately parameterized MLP
+        # Neuron-Level Model: Per-neuron MLPs processing memory traces
+        # Each of d_model neurons gets its own MLP
         self.neuron_depth = 2
         self.nlm = nn.Sequential(
             nn.Sequential(
+                # First NLM: (B*T, memory_length, d_model) -> (B*T, 2*hidden_dims, d_model)
                 NLM(
-                    in_dims=self.memory_length,
-                    out_dims=2 * self.hidden_dims,
-                    N=self.d_model,
+                    in_dims=self.memory_length,  # Input: memory_length (e.g., 16)
+                    out_dims=2
+                    * self.hidden_dims,  # Output: 2*hidden_dims (e.g., 8) for GLU
+                    N=self.d_model,  # Number of parallel MLPs (768)
                     dropout=self.dropout,
                 ),
-                nn.GLU(),
+                nn.GLU(),  # GLU halves the dimension: 2*hidden_dims -> hidden_dims
+                # Second NLM: (B*T, hidden_dims, d_model) -> (B*T, 2, d_model)
                 NLM(
-                    in_dims=self.hidden_dims,
-                    out_dims=2,
-                    N=self.d_model,
+                    in_dims=self.hidden_dims,  # Input: hidden_dims (e.g., 4)
+                    out_dims=2,  # Output: 2 for final GLU
+                    N=self.d_model,  # Number of parallel MLPs (768)
                     dropout=self.dropout,
                 ),
-                nn.GLU(),
+                nn.GLU(),  # Final GLU: 2 -> 1, output: (B*T, 1, d_model)
             )
         )
 
+        # Unused NLM definition (should be removed)
         NLM(in_dims=self.memory_length, out_dims=1, N=self.d_model)
 
-        # GPT Featurizes text data, we pull from pretrained or untrained weights
-        # self.GPT = GPT.from_pretrained("gpt2")
+        # GPT backbone (set externally via set_GPT method)
+        # self.GPT processes: (B, T) -> (B, T, vocab_size), loss, (B, T, d_model)
 
-        # Final projection to vocabulary size
-        self.lm_head = nn.Linear(self.d_model, config.vocab_size, bias=False)
+        # Final projection to vocabulary
+        # Input: (B*T, d_model) -> Output: (B*T, vocab_size)
+        self.lm_head = nn.Linear(self.d_model, args.vocab_size, bias=False)
 
-        # Synchronizations (Post-act)
-        self.n_sync_out = int(self.d_model // 2)
-        self.n_sync_act = int(self.d_model - self.n_sync_out)
+        # Skip connection mixing parameter (learnable scalar)
+        # Controls balance between GPT-2 logits and CTM predictions
+        self.skip_weight = nn.Parameter(torch.tensor(0.5))  # Shape: scalar
 
-        # Full Run through CTM every 100 tokens or so
+        # Synchronization dimensions for output and action
+        self.n_sync_out = int(self.d_model // 2)  # e.g., 384 for output sync
+        self.n_sync_act = int(
+            self.d_model - self.n_sync_out
+        )  # e.g., 384 for action sync
+
+        # Output projection layer (lazy initialization)
+        # Input: (B*T, d_model) -> Output: (B*T, vocab_size)
         self.ouput_proj = nn.Sequential(nn.LazyLinear(self.d_model))
         self.init_sync_params("action")
         self.init_sync_params("out")
@@ -232,7 +242,15 @@ class CTM(nn.Module):
                 )
             ),
         )
-        self.q_proj = nn.LazyLinear(self.d_model)
+        self.q_proj = nn.Linear(self.n_sync_act, self.d_model)
+        self.k_proj = nn.Linear(self.d_model, self.d_model)
+        self.v_proj = nn.Linear(self.d_model, self.d_model)
+        self.merge_proj = nn.Linear(self.d_model * 2, self.d_model)
+
+        self.GPT = None
+        self.ln = nn.LayerNorm(self.vocab_size)
+        self.ctmlogitscale = nn.Parameter(torch.tensor(1.0))
+        self.currGPTLoss = None
 
     def set_GPT(self, gpt):
         self.GPT = gpt
@@ -244,6 +262,8 @@ class CTM(nn.Module):
         """
         Compute the certainty of the current prediction
         Certainty is defined as being 1-normalised entropy.
+        input: current_prediction (B*T, D)
+        output: certainties (B*T, 2)
         """
         B = current_prediction.size(0)
         reshaped_pred = current_prediction.reshape([B] + [-1])
@@ -258,8 +278,8 @@ class CTM(nn.Module):
 
         # Normalize the entropy
         ne = entropy / max_entropy
-        # if len(logits.shape)>2 and reduction == 'mean':
-        # ne = normalized_entropy.flatten(1).mean(-1)
+        # if len(current_prediction.shape) > 2 and reduction == "mean":
+        #     ne = ne.flatten(1).mean(-1)
 
         current_certainty = torch.stack((ne, 1 - ne), -1)
         return current_certainty
@@ -309,66 +329,82 @@ class CTM(nn.Module):
             nn.Parameter(torch.zeros(sync_rep), requires_grad=True),
         )
 
-    def forward(self, x, targets):
+    # tracking=False,
+    def forward(self, x, targets=None):
         """
+        Forward pass of the CTM
+        Featurize Logits through GPT2
+        Then feed into synapse -> nlm -> synchronisation loop
         x: tokenized words
         y: targets = y
         """
+        assert self.GPT is not None
         B, T = x.size(0), x.size(1)
-        # --- Tracking Initialization ---
-        pre_activations_tracking = []
-        post_activations_tracking = []
-        synch_out_tracking = []
-        synch_action_tracking = []
-        attention_tracking = []
+        # if tracking:
+        #     # --- Tracking Initialization ---
+        #     pre_activations_tracking = []
+        #     post_activations_tracking = []
+        #     synch_out_tracking = []
+        #     synch_action_tracking = []
+        #     attention_tracking = []
 
-        # Compute Features
-        logits, gptloss, kv = self.GPT(x, targets)  # B, T, C
-        # print(f"GPT loss: {gptloss.item():.4f}")
+        """
+        Compute the key-value features from the input data using the backbone.
+        """
+        # featurize gpt
+        gptlogits, _, gptfeatures = self.GPT(
+            x, targets
+        )  # (B,T, Vocab_size), loss, (B, T, D)
+
+        # compute positional encodings and add to properly implement key value pairs for future attention
+        pos = torch.arange(0, T, dtype=torch.long, device=x.device)  # shape (T)
+        pos_enc = self.GPT.transformer.wpe(pos)
+        kv = (gptfeatures + pos_enc).flatten(2)
+        k = self.k_proj(kv)
+        v = self.v_proj(kv)
 
         # --- Reshape for per-token processing ---
         # Treat the time dimension as part of the batch for the CTM loop
-        kv = kv.view(B * T, 1, self.d_model)  # Shape: (B*T, 1, D)
         batch_size = B * T  # New effective batch size
 
         r_action, r_out = torch.exp(-self.decay_params_action).unsqueeze(0).repeat(
             batch_size, 1
         ), torch.exp(-self.decay_params_out).unsqueeze(0).repeat(batch_size, 1)
-        activated_state = self.start_activated_state.unsqueeze(0).expand(batch_size, -1)
-        # print("r_action", r_action.shape, r_out.shape)
-        # --- Prepare Storage for Outputs per Iteration ---
-        predictions = torch.empty(
-            batch_size,
-            self.out_dims,
-            self.iterations,
-            device=self.device,
-            dtype=torch.float32,
-        )
-        certainties = torch.empty(
-            batch_size, 2, self.iterations, device=self.device, dtype=torch.float32
-        )
 
-        # --- Initialise Recurrent State ---
+        # Initialize predictions and certainties tensors
+        predictions = torch.zeros(
+            batch_size, self.vocab_size, self.iterations, device=x.device
+        )  # (B*T, vocab_size, iterations)
+        certainties = torch.zeros(
+            batch_size, 2, self.iterations, device=x.device
+        )  # (B*T, 2, iterations)
+
+        # Initialize state_trace and activated_state using start parameters
+        # Use batch_size (B*T) for all CTM internal processing
         state_trace = self.start_trace.unsqueeze(0).expand(
             batch_size, -1, -1
-        )  # Shape: (B*T, D, M)
+        )  # (B*T, d_model, memory_length)
+
         activated_state = self.start_activated_state.unsqueeze(0).expand(
             batch_size, -1
-        )  # Shape: (B*T, D)
+        )  # (B*T, d_model)
 
-        # Init recurrent sync decay values
-        decay_alpha_action, decay_beta_action = None, None
-        self.decay_params_action.data = torch.clamp(self.decay_params_action, 0, 15)
-        self.decay_params_out.data = torch.clamp(self.decay_params_out, 0, 15)
-        r_action, r_out = torch.exp(-self.decay_params_action).unsqueeze(0).repeat(
-            batch_size, 1
-        ), torch.exp(-self.decay_params_out).unsqueeze(0).repeat(batch_size, 1)
+        # Initialize decay parameters - all should use batch_size (B*T)
+        decay_alpha_action = r_action  # (B*T, n_sync_act)
+        decay_beta_action = r_action  # (B*T, n_sync_act)
+        decay_alpha_out = r_out  # (B*T, n_sync_out)
+        decay_beta_out = r_out  # (B*T, n_sync_out)
 
-        _, decay_alpha_out, decay_beta_out = self.compute_sync(
+        # Initialize synchronization
+        sync_action, decay_alpha_action, decay_beta_action = self.compute_sync(
+            activated_state, None, None, r_action, "action"
+        )  # sync_action: (B*T, n_sync_act)
+
+        sync_out, decay_alpha_out, decay_beta_out = self.compute_sync(
             activated_state, None, None, r_out, "out"
-        )
+        )  # sync_out: (B*T, n_sync_out)
 
-        for stepi in tqdm(range(self.iterations)):
+        for stepi in range(self.iterations):
             sync_action, decay_alpha_action, decay_beta_action = self.compute_sync(
                 activated_state,
                 decay_alpha_action,
@@ -376,25 +412,30 @@ class CTM(nn.Module):
                 r_action,
                 "action",
             )
-            # print(f"Iteration {stepi}\n")
 
-            q = self.q_proj(sync_action).unsqueeze(1)  # Shape: (B*T, 1, D)
-            # print("q: ", q.shape)
-            attn_out = F.scaled_dot_product_attention(q, kv, kv, is_causal=False)
+            # --- Interact with Data via Attention ---
+            q = self.q_proj(sync_action).view(B, T, -1)  # (B*T, 1, d_input)
+            attn_out = F.scaled_dot_product_attention(
+                q.transpose(0, 1), k.transpose(0, 1), v.transpose(0, 1), is_causal=False
+            ).transpose(
+                0, 1
+            )  # transpose for expected layer
 
-            # print("attention", attn_out.squeeze(1).shape)  # (B*T, C)
-            logits = torch.cat((attn_out.squeeze(1), activated_state), dim=-1)
-            # print("LOGITS SHAPE, (B,T,C)", logits.shape)
-            state = self.synnet(logits)  # (B, T, C)
+            # --- Synaptic Network Processing ---
+            synapse_input = torch.cat(
+                (attn_out.flatten(0, 1), activated_state), dim=-1
+            )  # (B*T, d_input + d_model)
+            state = self.synnet(synapse_input)  # (B*T, d_model)
 
-            # state_trace is the history of incoming pre-activations
-
+            # --- Update Memory with Pre-activations ---
             state_trace = torch.cat(
                 (state_trace[:, :, 1:], state.unsqueeze(-1)), dim=-1
-            )
-            # print(state_trace.shape)  # Should be batch, d_model, Mem len
-            activated_state = self.nlm(state_trace).squeeze(-1)
-            # We now have the activated state to feed post-activations
+            )  # (B*T, d_model, memory_length)
+
+            # --- Neuron-Level Model Processing ---
+            # NLM expects (B*T, memory_length, d_model) format
+            activated_state = self.nlm(state_trace).squeeze(-1)  # (B*T, d_model)
+
             # --- Calculate Synchronisation for Output Predictions ---
             sync_out, decay_alpha_out, decay_beta_out = self.compute_sync(
                 activated_state,
@@ -402,42 +443,52 @@ class CTM(nn.Module):
                 decay_beta_out,
                 r_out,
                 synch_type="out",
-            )
+            )  # sync_out: (B*T, n_sync_out)
 
-            # --- Get Predictions and Certainties ---
-            current_prediction = self.ouput_proj(sync_out)
-            # print("curr pred", current_prediction.shape)
-            current_certainty = self.compute_certainty(current_prediction)
+            # --- Get CTM Predictions and Certainties ---
+            ctm_prediction = self.ouput_proj(sync_out)  # (B*T, d_model)
+            ctm_logits = self.GPT.lm_head(
+                ctm_prediction
+            )  # (B*T, vocab_size) project predictionto vocab size
+            current_certainty = self.compute_certainty(ctm_prediction)  # (B*T, 2)
+
+            # --- Skip Connection: Mix GPT-2 logits with CTM predictions ---
+            # Skip add gpt2 weights and layernorm
+            # Mixing log probs rather than weights
+            tau = 1.0
+            p_ctm = F.softmax(ctm_logits / tau, dim=-1)
+            p_gpt = F.softmax(gptlogits.flatten(0, 1) / tau, dim=-1)
+            alpha = torch.sigmoid(self.skip_weight)
+            p = alpha * self.ctmlogitscale * p_ctm + (1 - alpha) * p_gpt
+
+            current_prediction = torch.log(p + 1e-12)
 
             predictions[..., stepi] = current_prediction
             certainties[..., stepi] = current_certainty
-            pre_activations_tracking.append(
-                state_trace[:, :, -1].detach().cpu().numpy()
-            )
-            post_activations_tracking.append(activated_state.detach().cpu().numpy())
-            # attention_tracking.append(attn_weights.detach().cpu().numpy())
-            synch_out_tracking.append(sync_out.detach().cpu().numpy())
-            synch_action_tracking.append(sync_action.detach().cpu().numpy())
 
+            # pre_activations_tracking.append(
+            #     state_trace[:, :, -1].detach().cpu().numpy()
+            # )
+            # post_activations_tracking.append(activated_state.detach().cpu().numpy())
+            # synch_out_tracking.append(sync_out.detach().cpu().numpy())
+            # synch_action_tracking.append(sync_action.detach().cpu().numpy())
+            # loss, ce_loss = self.calc_loss(predictions, certainties, targets)
         return (
             predictions,
             certainties,
-            (np.array(synch_out_tracking), np.array(synch_action_tracking)),
-            np.array(pre_activations_tracking),
-            np.array(post_activations_tracking),
-            np.array(attention_tracking),
+            # (np.array(synch_out_tracking), np.array(synch_action_tracking)),
+            # np.array(pre_activations_tracking),
+            # np.array(post_activations_tracking),
+            # np.array(attention_tracking),
         )
 
     def calc_loss(self, predictions, certainties, targets):
         """
-        Predictions: (B*T, D, iterations)
+        Predictions: (B*T, vocab_size, iterations)
         Certainties: (B*T, 2, iterations)
         Targets: (B, T)
         """
         assert targets is not None
-        # --- Reshape and prepare data ---
-        B = targets.size(0)
-        T = targets.size(1)
 
         # predictions shape: (B*T, D, iterations)
         # We need to project to vocab size for each iteration
@@ -447,14 +498,16 @@ class CTM(nn.Module):
         # Reshape to (B*T * iterations, D) -> apply lm_head -> reshape back
         predictions_reshaped = predictions.permute(
             0, 2, 1
-        ).contiguous()  # (B*T, iterations, D)
+        ).contiguous()  # (B*T, iterations, vocab_size)
         predictions_reshaped = predictions_reshaped.view(
             -1, self.d_model
-        )  # (B*T * iterations, D)
+        )  # (B*T * iterations, vocab_size)
 
-        # Apply language model head to get logits
-        logits = self.lm_head(predictions_reshaped)  # (B*T * iterations, vocab_size)
-        logits = logits.view(
+        # # Apply language model head to get logits
+        # logits = self.GPT.lm_head(
+        #     predictions_reshaped
+        # )  # (B*T * iterations, vocab_size)
+        logits = predictions_reshaped.view(
             batch_size, self.iterations, -1
         )  # (B*T, iterations, vocab_size)
 
@@ -490,10 +543,6 @@ class CTM(nn.Module):
         # Combined loss
         loss = (loss_ce + loss_certainty) / 2
 
-        # print(f"Cross entropy loss (min across iterations): {loss_ce.item():.4f}")
-        # print(f"Certainty-based loss: {loss_certainty.item():.4f}")
-        # print(f"Combined loss: {loss.item():.4f}")
-
         return loss, ce_loss_idx
 
     @torch.no_grad()
@@ -508,13 +557,16 @@ class CTM(nn.Module):
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = (
                 idx
-                if idx.size(1) <= self.config.block_size
-                else idx[:, -self.config.block_size :]
+                if idx.size(1) <= self.args.block_size
+                else idx[:, -self.args.block_size :]
             )
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond, targets=None)
             # pluck the logits at the final step and scale by desired temperature
-            logits = logits[:, -1, :] / temperature
+            # Handle batch dimension expansion - take only first batch element
+            logits = (
+                logits[0:1, -1, :] / temperature
+            )  # Keep batch dim=1 consistent with idx
             # optionally crop the logits to only the top k options
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
@@ -529,176 +581,57 @@ class CTM(nn.Module):
         self.train()  # Set the model back to training mode
         return idx
 
-    def plot_neural_dynamics(
-        post_activations_history,
-        N_to_plot,
-        save_location,
-        axis_snap=False,
-        N_per_row=5,
-        which_neurons_mid=None,
-        mid_colours=None,
-        use_most_active_neurons=False,
-    ):
-        assert (
-            N_to_plot % N_per_row == 0
-        ), f"For nice visualisation, N_to_plot={N_to_plot} must be a multiple of N_per_row={N_per_row}"
-        assert post_activations_history.shape[-1] >= N_to_plot
-        figscale = 2
-        aspect_ratio = 3
-        mosaic = (
-            np.array([[f"{i}"] for i in range(N_to_plot)])
-            .flatten()
-            .reshape(-1, N_per_row)
-        )
-        fig_synch, axes_synch = plt.subplot_mosaic(
-            mosaic=mosaic,
-            figsize=(
-                figscale * mosaic.shape[1] * aspect_ratio * 0.2,
-                figscale * mosaic.shape[0] * 0.2,
-            ),
-        )
-        fig_mid, axes_mid = plt.subplot_mosaic(
-            mosaic=mosaic,
-            figsize=(
-                figscale * mosaic.shape[1] * aspect_ratio * 0.2,
-                figscale * mosaic.shape[0] * 0.2,
-            ),
-            dpi=200,
-        )
 
-        palette = sns.color_palette("husl", 8)
+""" EXPERIMENTAL
+    def change_skip(self):
+        # DYNAMICALLY Update skip weight according to the difference between gptloss and ctmloss
+        diff = (
+            loss_ce - self.currGPTLoss
+        ).detach()  # detach so we don't backprop through the transform
+        k = 5.0  # scale factor: sharpness of mapping, tuneable
+        eps = 1e-6
+        desired_alpha = torch.sigmoid(k * diff)  # scalar or per-batch scalar
+        desired_alpha = desired_alpha.clamp(eps, 1 - eps)
+        # convert to logit-space to set skip_weight (skip_weight is pre-sigmoid)
+        new_skip = torch.log(desired_alpha / (1.0 - desired_alpha))
 
-        which_neurons_synch = np.arange(N_to_plot)
-        # which_neurons_mid = np.arange(N_to_plot, N_to_plot*2) if post_activations_history.shape[-1] >= 2*N_to_plot else np.random.choice(np.arange(post_activations_history.shape[-1]), size=N_to_plot, replace=True)
-        random_indices = np.random.choice(
-            np.arange(post_activations_history.shape[-1]),
-            size=N_to_plot,
-            replace=post_activations_history.shape[-1] < N_to_plot,
-        )
-        if use_most_active_neurons:
-            metric = (
-                np.abs(np.fft.rfft(post_activations_history, axis=0))[3:].mean(0).std(0)
-            )
-            random_indices = np.argsort(metric)[-N_to_plot:]
-            np.random.shuffle(random_indices)
-        which_neurons_mid = (
-            which_neurons_mid if which_neurons_mid is not None else random_indices
-        )
+        # smooth using EMA of previous alpha to avoid abrupt jumps
+        ema = 0.9
+        current_alpha = torch.sigmoid(self.skip_weight).detach()
+        smoothed_alpha = ema * current_alpha + (1 - ema) * desired_alpha
+        smoothed_alpha = smoothed_alpha.clamp(eps, 1 - eps)
+        new_skip = torch.log(smoothed_alpha / (1.0 - smoothed_alpha))
+        # print("NEW skip weight", new_skip)
+        # apply directly (in-place)
+        with torch.no_grad():
+            self.skip_weight.copy_(new_skip)
+"""
 
-        if mid_colours is None:
-            mid_colours = [palette[np.random.randint(0, 8)] for ndx in range(N_to_plot)]
-        with tqdm(
-            total=N_to_plot, initial=0, leave=False, position=1, dynamic_ncols=True
-        ) as pbar_inner:
-            pbar_inner.set_description("Plotting neural dynamics")
-            for ndx in range(N_to_plot):
 
-                ax_s = axes_synch[f"{ndx}"]
-                ax_m = axes_mid[f"{ndx}"]
+"""
+Experimental DEBUGGING PRINT statements
+# # right after computing ctm_logits and gptlogits
+# print(
+#     "ctm_logits mean/std:",
+#     ctm_logits.mean().item(),
+#     ctm_logits.std().item(),
+# )
+# print(
+#     "gpt_logits mean/std:", gptlogits.mean().item(), gptlogits.std().item()
+# )
+# top tokens
+# topk_ctm = torch.topk(ctm_logits, 10, dim=-1).indices[0, :10]
+# topk_gpt = torch.topk(gptlogits.flatten(0, 1), 10, dim=-1).indices[0, :10]
+# print("topk ctm", topk_ctm.tolist(), "topk gpt", topk_gpt.tolist())
+# print(
+#     "topk ctm",
+#     enc.decode(topk_ctm.tolist()),
+#     "topk gpt",
+#     enc.decode(topk_gpt.tolist()),
+# )
 
-                traces_s = post_activations_history[:, :, which_neurons_synch[ndx]].T
-                traces_m = post_activations_history[:, :, which_neurons_mid[ndx]].T
-                c_s = palette[np.random.randint(0, 8)]
-                c_m = mid_colours[ndx]
-
-                for traces_s_here, traces_m_here in zip(traces_s, traces_m):
-                    ax_s.plot(
-                        np.arange(len(traces_s_here)),
-                        traces_s_here,
-                        linestyle="-",
-                        color=c_s,
-                        alpha=0.05,
-                        linewidth=0.6,
-                    )
-                    ax_m.plot(
-                        np.arange(len(traces_m_here)),
-                        traces_m_here,
-                        linestyle="-",
-                        color=c_m,
-                        alpha=0.05,
-                        linewidth=0.6,
-                    )
-
-                ax_s.plot(
-                    np.arange(len(traces_s[0])),
-                    traces_s[0],
-                    linestyle="-",
-                    color="white",
-                    alpha=1,
-                    linewidth=2.5,
-                )
-                ax_s.plot(
-                    np.arange(len(traces_s[0])),
-                    traces_s[0],
-                    linestyle="-",
-                    color=c_s,
-                    alpha=1,
-                    linewidth=1.3,
-                )
-                ax_s.plot(
-                    np.arange(len(traces_s[0])),
-                    traces_s[0],
-                    linestyle="-",
-                    color="black",
-                    alpha=1,
-                    linewidth=0.3,
-                )
-                ax_m.plot(
-                    np.arange(len(traces_m[0])),
-                    traces_m[0],
-                    linestyle="-",
-                    color="white",
-                    alpha=1,
-                    linewidth=2.5,
-                )
-                ax_m.plot(
-                    np.arange(len(traces_m[0])),
-                    traces_m[0],
-                    linestyle="-",
-                    color=c_m,
-                    alpha=1,
-                    linewidth=1.3,
-                )
-                ax_m.plot(
-                    np.arange(len(traces_m[0])),
-                    traces_m[0],
-                    linestyle="-",
-                    color="black",
-                    alpha=1,
-                    linewidth=0.3,
-                )
-                if axis_snap and np.all(np.isfinite(traces_s[0])):
-                    ax_s.set_ylim(
-                        [
-                            np.min(traces_s[0]) - np.ptp(traces_s[0]) * 0.05,
-                            np.max(traces_s[0]) + np.ptp(traces_s[0]) * 0.05,
-                        ]
-                    )
-                    ax_m.set_ylim(
-                        [
-                            np.min(traces_m[0]) - np.ptp(traces_m[0]) * 0.05,
-                            np.max(traces_m[0]) + np.ptp(traces_m[0]) * 0.05,
-                        ]
-                    )
-
-                ax_s.grid(False)
-                ax_m.grid(False)
-                ax_s.set_xlim([0, len(traces_s[0]) - 1])
-                ax_m.set_xlim([0, len(traces_m[0]) - 1])
-
-                ax_s.set_xticklabels([])
-                ax_s.set_yticklabels([])
-
-                ax_m.set_xticklabels([])
-                ax_m.set_yticklabels([])
-                pbar_inner.update(1)
-        fig_synch.tight_layout(pad=0.05)
-        fig_mid.tight_layout(pad=0.05)
-        if save_location is not None:
-            fig_synch.savefig(f"{save_location}/neural_dynamics_synch.pdf", dpi=200)
-            fig_synch.savefig(f"{save_location}/neural_dynamics_synch.png", dpi=200)
-            fig_mid.savefig(f"{save_location}/neural_dynamics_other.pdf", dpi=200)
-            fig_mid.savefig(f"{save_location}/neural_dynamics_other.png", dpi=200)
-            plt.close(fig_synch)
-            plt.close(fig_mid)
-        return fig_synch, fig_mid, which_neurons_mid, mid_colours
+# print(
+#     "p: ",
+#     enc.decode(torch.topk(p, 10, dim=-1).indices[0, :10].tolist()),
+# )
+"""

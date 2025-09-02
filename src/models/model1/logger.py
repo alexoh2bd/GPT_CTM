@@ -1,11 +1,12 @@
 import logging
 import os
 
+
 def setup_logger(log_dir="logs", log_file="train.log"):
     os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, log_file)
 
-    logger = logging.getLogger("TransformerTrainer")
+    logger = logging.getLogger("Transformer Trainer")
     logger.setLevel(logging.INFO)  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 
     # Avoid duplicated handlers
