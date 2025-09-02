@@ -6,10 +6,11 @@ import tiktoken
 
 
 class DL:  # DataLoader
-    def __init__(self, B, T, dir_path):
+    def __init__(self, B, T, dir_path, logger):
         self.B = B
         self.T = T
         self.dir = dir_path
+        self.logger = logger
         self.filenames = [f for f in os.listdir(dir_path)]
         self.files_read = 0
         self.enc = tiktoken.get_encoding("gpt2")
@@ -24,9 +25,11 @@ class DL:  # DataLoader
     # init dataloader with first batch
     def read_next_file(self):
         if self.files_read >= len(self.filenames):
-            print(f"Read all {self.files_read}files in Directory.")
+            self.logger.info(
+                f"Read all {self.files_read} files in Directory {self.dir}."
+            )
             return False
-        print(f"Reading file {self.filenames[self.files_read]}")
+        self.logger.info(f"Reading file {self.filenames[self.files_read]}")
         all_tokens = []
         self.curr_pos = 0
         curr_df = pl.read_parquet(self.dir / self.filenames[self.files_read])
@@ -38,13 +41,13 @@ class DL:  # DataLoader
                 all_tokens.extend(tokens)
                 all_tokens.append(self.enc.eot_token)  # add separator at end
         self.data = torch.tensor(all_tokens)
-        print("Data Length", len(self.data))
+        # print("Data Length", len(self.data))
         self.files_read += 1
         return True
 
     def next_batch(self):
         if self.data is None:
-            print("data is none")
+            # print("data is none")
             self.read_next_file()
         # if end of the dataframe and skip to next file
         B, T = self.B, self.T
@@ -52,18 +55,20 @@ class DL:  # DataLoader
 
         # returns none, none if no data is available
         if end_pos >= len(self.data):
-            print(f"end pos {end_pos}> data length{len(self.data)}")
+            self.logger.info(
+                f"Dataloader: end pos {end_pos}> data length{len(self.data)}"
+            )
             self.read_next_file()
             return None, None
 
-        print(
-            "Next Batch! Current position: ",
-            self.curr_pos,
-            "end position",
-            end_pos,
-            "end of row",
-            len(self.data),
-        )
+        # self.logger.info(
+        #     "Next Batch! Current position: ",
+        #     self.curr_pos,
+        #     "end position",
+        #     end_pos,
+        #     "end of row",
+        #     len(self.data),
+        # )
         buf = self.data[self.curr_pos : end_pos]
         x = buf[:-1].view(B, T)
         y = buf[1:].view(B, T)

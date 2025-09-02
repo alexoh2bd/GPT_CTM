@@ -142,8 +142,8 @@ def main(args):
     total_batch_size = args.total_batch_size
     grad_accum_steps = total_batch_size // (B * T)
 
-    train_loader = DL(B, T, train_dir)
-    val_loader = DL(B, T, val_dir)
+    train_loader = DL(B, T, train_dir, logger)
+    val_loader = DL(B, T, val_dir, logger)
 
     # Mixed precision setup
     scaler = torch.amp.GradScaler(device)
@@ -160,141 +160,152 @@ def main(args):
     logger.info(f"Effective batch size: {total_batch_size}")
 
     # Training loop
-    for step in tqdm(range(args.num_batches), desc="Training"):
-        t0 = time.time()
+    with tqdm(total=args.num_batches) as pbar:
+        for step in range(args.num_batches):
 
-        # Training step
-        model.train()
-        optimizer.zero_grad()
-        loss_accum = 0.0
+            t0 = time.time()
 
-        for _ in range(grad_accum_steps):
-            x, y = train_loader.next_batch()
-            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
+            # Training step
+            model.train()
+            optimizer.zero_grad()
+            loss_accum = 0.0
 
-            with torch.autocast(device_type=device, dtype=torch.bfloat16):
-                predictions, certainties = model(x, targets=y)
-                loss, _ = model.calc_loss(predictions, certainties, y)
-                loss = loss / grad_accum_steps  # Scale loss for accumulation
+            for _ in range(grad_accum_steps):
+                x, y = train_loader.next_batch()
+                x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
 
-            scaler.scale(loss).backward()
-            loss_accum += loss.detach()
+                with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                    predictions, certainties = model(x, targets=y)
+                    loss, _ = model.calc_loss(predictions, certainties, y)
+                    loss = loss / grad_accum_steps  # Scale loss for accumulation
 
-            # Memory cleanup for GPU
-            if device in ["cuda", "mps"]:
-                if device == "cuda":
-                    torch.cuda.empty_cache()
-                elif device == "mps":
-                    torch.mps.empty_cache()
-            del predictions, certainties
-            gc.collect()
+                scaler.scale(loss).backward()
+                loss_accum += loss.detach()
 
-        # Gradient clipping and optimizer step
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                # Memory cleanup for GPU
+                if device in ["cuda", "mps"]:
+                    if device == "cuda":
+                        torch.cuda.empty_cache()
+                    elif device == "mps":
+                        torch.mps.empty_cache()
+                del predictions, certainties
+                gc.collect()
 
-        # Learning rate scheduling
-        lr = get_lr(step, args)
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = lr
+            # Gradient clipping and optimizer step
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
-        scaler.step(optimizer)
-        scaler.update()
+            # Learning rate scheduling
+            lr = get_lr(step, args)
+            for param_group in optimizer.param_groups:
+                param_group["lr"] = lr
 
-        # Validation step
-        if step % args.val_interval == 0:
-            model.eval()
-            val_loss_accum = 0.0
-            val_steps = min(10, args.val_steps)  # Limit validation steps
+            scaler.step(optimizer)
+            scaler.update()
+            # Logging and metrics
+            t1 = time.time()
+            # Validation step
+            if step % args.val_interval == 0:
+                model.eval()
+                val_loss_accum = 0.0
+                val_steps = min(20, args.val_steps)  # Limit validation steps
 
-            with torch.no_grad():
-                for _ in range(val_steps):
-                    x_val, y_val = val_loader.next_batch()
-                    if x_val is None or y_val is None:
-                        continue
+                with torch.no_grad():
+                    for _ in range(val_steps):
+                        x_val, y_val = val_loader.next_batch()
+                        if x_val is None or y_val is None:
+                            continue
 
-                    x_val, y_val = x_val.to(device, non_blocking=True), y_val.to(
-                        device, non_blocking=True
+                        x_val, y_val = x_val.to(device, non_blocking=True), y_val.to(
+                            device, non_blocking=True
+                        )
+
+                        with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                            pred_val, cert_val = model(x_val, targets=y_val)
+                            val_loss, _ = model.calc_loss(pred_val, cert_val, y_val)
+
+                        val_loss_accum += val_loss.detach()
+
+                val_loss_avg = val_loss_accum / val_steps
+                val_losses.append(val_loss_avg.item())
+
+                # Save best model
+                if val_loss_avg < best_val_loss:
+                    best_val_loss = val_loss_avg
+                    checkpoint = build_checkpoint(
+                        step,
+                        model.state_dict(),
+                        optimizer.state_dict(),
+                        scaler.state_dict(),
+                        train_losses,
+                        best_val_loss,
+                        args,
+                    )
+                    prompt_text = ""
+                    # for prompt in prompts:
+                    #     prompt_text += (
+                    #         demo_generation(model, enc, device, prompt) + "\n"
+                    #     )
+
+                    torch.save(checkpoint, model_dir / "best_model.pth")
+                    logger.info(
+                        f"New best model saved. Val loss: {val_loss_avg:.4f}\n{prompt_text}"
                     )
 
-                    with torch.autocast(device_type=device, dtype=torch.bfloat16):
-                        pred_val, cert_val = model(x_val, targets=y_val)
-                        val_loss, _ = model.calc_loss(pred_val, cert_val, y_val)
+            dt = (t1 - t0) * 1000  # milliseconds
+            tokens_per_sec = (B * T * grad_accum_steps) / (t1 - t0)
+            train_losses.append(loss_accum.item())
 
-                    val_loss_accum += val_loss.detach()
+            if step % args.log_interval == 0:
+                logger.info(
+                    f"Step {step:4d} | "
+                    f"Train Loss: {loss_accum:.4f} | "
+                    f"LR: {lr:.2e} | "
+                    f"dt: {dt:.1f}ms | "
+                    f"tok/s: {tokens_per_sec:.0f}"
+                )
 
-            val_loss_avg = val_loss_accum / val_steps
-            val_losses.append(val_loss_avg.item())
+                if len(val_losses) > 0:
+                    logger.info(f"Val Loss: {val_losses[-1]:.4f}")
 
-            # Save best model
-            if val_loss_avg < best_val_loss:
-                best_val_loss = val_loss_avg
+            # Periodic checkpointing
+            if step % args.checkpoint_interval == 0 and step > 0:
                 checkpoint = build_checkpoint(
                     step,
                     model.state_dict(),
                     optimizer.state_dict(),
                     scaler.state_dict(),
                     train_losses,
-                    best_val_loss,
+                    val_losses,
                     args,
                 )
-                prompt_text = ""
-                for prompt in prompts:
-                    prompt_text += demo_generation(model, enc, device, prompt) + "\n"
-
-                torch.save(checkpoint, model_dir / "best_model.pth")
-                logger.info(
-                    f"New best model saved. Val loss: {val_loss_avg:.4f}\n{prompt_text}"
-                )
-
-        # Logging and metrics
-        t1 = time.time()
-        dt = (t1 - t0) * 1000  # milliseconds
-        tokens_per_sec = (B * T * grad_accum_steps) / (t1 - t0)
-        train_losses.append(loss_accum.item())
-
-        if step % args.log_interval == 0:
-            logger.info(
-                f"Step {step:4d} | "
-                f"Train Loss: {loss_accum:.4f} | "
+                torch.save(checkpoint, model_dir / f"checkpoint_step_{step}.pth")
+                logger.info(f"Checkpoint saved at step {step}")
+            pbar.set_description(
+                f"Batch {step:4d} | "
+                f"Loss: {loss_accum:.4f} | "
+                f"Val: {best_val_loss:.4f} | "
                 f"LR: {lr:.2e} | "
-                f"dt: {dt:.1f}ms | "
-                f"tok/s: {tokens_per_sec:.0f}"
+                f"Tok/s: {tokens_per_sec:.0f}"
             )
+            pbar.update(1)
 
-            if len(val_losses) > 0:
-                logger.info(f"Val Loss: {val_losses[-1]:.4f}")
+        # Final model save and generation demo
+        final_checkpoint = build_checkpoint(
+            args.num_batches,
+            model.state_dict(),
+            optimizer.state_dict(),
+            scaler.state_dict(),
+            train_losses,
+            val_losses,
+            args,
+        )
+        torch.save(final_checkpoint, model_dir / "final_model.pth")
 
-        # Periodic checkpointing
-        if step % args.checkpoint_interval == 0 and step > 0:
-            checkpoint = build_checkpoint(
-                step,
-                model.state_dict(),
-                optimizer.state_dict(),
-                scaler.state_dict(),
-                train_losses,
-                val_losses,
-                args,
-            )
-            torch.save(checkpoint, model_dir / f"checkpoint_step_{step}.pth")
-            logger.info(f"Checkpoint saved at step {step}")
-
-    # Final model save and generation demo
-    final_checkpoint = build_checkpoint(
-        args.num_batches,
-        model.state_dict(),
-        optimizer.state_dict(),
-        scaler.state_dict(),
-        train_losses,
-        val_losses,
-        args,
-    )
-    torch.save(final_checkpoint, model_dir / "final_model.pth")
-
-    logger.info("Training completed!")
-    logger.info(f"Final train loss: {train_losses[-1]:.4f}")
-    if val_losses:
-        logger.info(f"Best val loss: {best_val_loss:.4f}")
+        logger.info("Training completed!")
+        logger.info(f"Final train loss: {train_losses[-1]:.4f}")
+        if val_losses:
+            logger.info(f"Best val loss: {best_val_loss:.4f}")
 
 
 def parse_args():
