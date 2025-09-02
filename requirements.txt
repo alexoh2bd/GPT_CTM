@@ -6,3 +6,5 @@ transformers
 psutil
 pillow
 datasets
+dotenv
+polars
