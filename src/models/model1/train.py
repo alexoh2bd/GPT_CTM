@@ -5,12 +5,12 @@ import torch
 import os
 import tiktoken
 import gc
+import argparse
 
 from gpt import GPT
 from ctm import CTM
 import time
 import math
-from args import parse_args
 
 from logger import setup_logger
 from tqdm import tqdm
@@ -201,10 +201,6 @@ def main(args):
         scaler.step(optimizer)
         scaler.update()
 
-        # Gradient clipping and optimizer step
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-
         # Validation step
         if step % args.val_interval == 0:
             model.eval()
@@ -299,6 +295,87 @@ def main(args):
     logger.info(f"Final train loss: {train_losses[-1]:.4f}")
     if val_losses:
         logger.info(f"Best val loss: {best_val_loss:.4f}")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train a GPT model with CTM.")
+
+    # Data and Model parameters
+    parser.add_argument("--dataset", type=str, default="", help="Dataset name")
+    parser.add_argument(
+        "--logfile", type=str, default="trainthink.log", help="Log File name"
+    )
+
+    parser.add_argument("--device", type=str, default="mps", help="Device name")
+    parser.add_argument("--iterations", type=int, default=12, help="CTM iterations")
+    # Training parameters
+    parser.add_argument(
+        "--num_batches",
+        type=int,
+        default=4000,
+        help="Total Number of batches in Training Run",
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=2, help="Batch size for data loader"
+    )
+    parser.add_argument(
+        "--total_batch_size",
+        type=int,
+        default=2**10,
+        help="Total batch size for gradient accumulation",
+    )
+    parser.add_argument("--block_size", type=int, default=128, help="Block size")
+    parser.add_argument("--vocab_size", type=int, default=50257, help="Vocabulary size")
+    parser.add_argument("--n_layer", type=int, default=12, help="Number of layers")
+    parser.add_argument("--n_head", type=int, default=4, help="Number of heads")
+    parser.add_argument("--n_embd", type=int, default=768, help="Embedding dimension")
+    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
+    parser.add_argument("--bias", action="store_true", help="Use bias in layers")
+    parser.add_argument(
+        "--no-bias", dest="bias", action="store_false", help="Don't use bias in layers"
+    )
+    parser.add_argument("--wd", type=float, default=0.1, help="Weight decay")
+    parser.add_argument(
+        "--max_lr", type=float, default=6e-4, help="Maximum learning rate"
+    )
+    parser.add_argument(
+        "--min_lr_ratio", type=float, default=0.1, help="Ratio of min_lr to max_lr"
+    )
+    parser.add_argument(
+        "--hidden_dimensions",
+        type=int,
+        default=4,
+        help="Hidden Dimensions in Neuron Level Models",
+    )
+    parser.add_argument(
+        "--memory_length",
+        type=int,
+        default=16,
+        help="Input Memory Length with Neuron Level Models",
+    )
+    parser.add_argument("--warmup_steps", type=int, default=200, help="Warmup steps")
+    parser.add_argument(
+        "--max_steps", type=int, default=50, help="Max steps for learning rate decay"
+    )
+    parser.add_argument("--beta1", type=float, default=0.9, help="AdamW beta1")
+    parser.add_argument("--beta2", type=float, default=0.95, help="AdamW beta2")
+
+    parser.add_argument(
+        "--val_interval", type=int, default=200, help="Validation interval"
+    )
+    parser.add_argument(
+        "--val_steps", type=int, default=10, help="Number of validation steps"
+    )
+    parser.add_argument("--log_interval", type=int, default=50, help="Logging interval")
+    parser.add_argument(
+        "--checkpoint_interval", type=int, default=1000, help="Checkpoint interval"
+    )
+
+    parser.set_defaults(bias=True)
+
+    args = parser.parse_args()
+    args.min_lr = args.max_lr * args.min_lr_ratio
+    return args
 
 
 if __name__ == "__main__":
