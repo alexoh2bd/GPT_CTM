@@ -176,7 +176,7 @@ def main(args):
 
                 with torch.autocast(device_type=device, dtype=torch.bfloat16):
                     predictions, certainties = model(x, targets=y)
-                    loss, _ = model.calc_loss(predictions, certainties, y)
+                    loss = model.calc_loss(predictions, certainties, y)
                     loss = loss / grad_accum_steps  # Scale loss for accumulation
 
                 scaler.scale(loss).backward()
@@ -188,7 +188,7 @@ def main(args):
                         torch.cuda.empty_cache()
                     elif device == "mps":
                         torch.mps.empty_cache()
-                del predictions, certainties
+                del predictions
                 gc.collect()
 
             # Gradient clipping and optimizer step
@@ -222,7 +222,7 @@ def main(args):
 
                         with torch.autocast(device_type=device, dtype=torch.bfloat16):
                             pred_val, cert_val = model(x_val, targets=y_val)
-                            val_loss, _ = model.calc_loss(pred_val, cert_val, y_val)
+                            val_loss = model.calc_loss(pred_val, cert_val, y_val)
 
                         val_loss_accum += val_loss.detach()
 
@@ -242,10 +242,10 @@ def main(args):
                         args,
                     )
                     prompt_text = ""
-                    # for prompt in prompts:
-                    #     prompt_text += (
-                    #         demo_generation(model, enc, device, prompt) + "\n"
-                    #     )
+                    for prompt in prompts:
+                        prompt_text += (
+                            demo_generation(model, enc, device, prompt) + "\n"
+                        )
 
                     torch.save(checkpoint, model_dir / "best_model.pth")
                     logger.info(

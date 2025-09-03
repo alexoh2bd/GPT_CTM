@@ -140,9 +140,9 @@ class NLM(nn.Module):
         out = self.dropout(x)
         out = self.ln(out)
         # out = [self.linears[i](out[:, i, :]) for i in range(len(self.linears))]
-        # print("NLM OUTPUT: ", out.shape)
+        # print("NLM OUTPUT: ", out.shape, self.w1.shape, self.b1.shape)
 
-        out = torch.einsum("BDM,MHD->BDH", out, self.w1) + self.b1
+        out = torch.einsum("BTDM,MHD->BTDH", out, self.w1) + self.b1
         # out = torch.stack(out, dim=1)
         # print("NLM OUTPUT: ", out.shape)
 
@@ -262,16 +262,14 @@ class CTM(nn.Module):
         """
         Compute the certainty of the current prediction
         Certainty is defined as being 1-normalised entropy.
-        input: current_prediction (B*T, D)
-        output: certainties (B*T, 2)
+        input: current_prediction (B,T, D)
+        output: certainties (B,T, 2)
         """
         B = current_prediction.size(0)
-        reshaped_pred = current_prediction.reshape([B] + [-1])
-        # print("reshaped pred", reshaped_pred.shape)
 
         # Certainty based on entropy
-        pred = F.softmax(reshaped_pred, dim=-1)
-        log_pred = F.log_softmax(reshaped_pred, dim=-1)
+        pred = F.softmax(current_prediction, dim=-1)
+        log_pred = F.log_softmax(current_prediction, dim=-1)
         entropy = -torch.sum(pred * log_pred, dim=-1)
         num_classes = pred.shape[-1]
         max_entropy = torch.log(torch.tensor(num_classes, dtype=torch.float32))
@@ -293,10 +291,9 @@ class CTM(nn.Module):
             neurons_left = self.out_neuridx_l
             neurons_right = self.out_neuridx_r
 
-        left = activated_state[:, neurons_left]
-        right = activated_state[:, neurons_right]
+        left = activated_state[..., neurons_left]
+        right = activated_state[..., neurons_right]
         pairwise_product = left * right
-
         # Compute synchronisation recurrently
         if decay_alpha is None or decay_beta is None:
             decay_alpha = pairwise_product
@@ -362,38 +359,35 @@ class CTM(nn.Module):
         kv = (gptfeatures + pos_enc).flatten(2)
         k = self.k_proj(kv)
         v = self.v_proj(kv)
+        # Initialize predictions and certainties tensors
+        predictions = torch.zeros(
+            B, T, self.vocab_size, self.iterations, device=x.device
+        )  # (B*T, vocab_size, iterations)
+        certainties = torch.zeros(
+            B, T, 2, self.iterations, device=x.device
+        )  # (B*T, 2, iterations)
 
         # --- Reshape for per-token processing ---
         # Treat the time dimension as part of the batch for the CTM loop
-        batch_size = B * T  # New effective batch size
-
         r_action, r_out = torch.exp(-self.decay_params_action).unsqueeze(0).repeat(
-            batch_size, 1
-        ), torch.exp(-self.decay_params_out).unsqueeze(0).repeat(batch_size, 1)
-
-        # Initialize predictions and certainties tensors
-        predictions = torch.zeros(
-            batch_size, self.vocab_size, self.iterations, device=x.device
-        )  # (B*T, vocab_size, iterations)
-        certainties = torch.zeros(
-            batch_size, 2, self.iterations, device=x.device
-        )  # (B*T, 2, iterations)
+            B, T, 1
+        ), torch.exp(-self.decay_params_out).unsqueeze(0).repeat(B, T, 1)
 
         # Initialize state_trace and activated_state using start parameters
-        # Use batch_size (B*T) for all CTM internal processing
+        # Use B,T  for all CTM internal processing
         state_trace = self.start_trace.unsqueeze(0).expand(
-            batch_size, -1, -1
+            B, T, -1, -1
         )  # (B*T, d_model, memory_length)
 
         activated_state = self.start_activated_state.unsqueeze(0).expand(
-            batch_size, -1
+            B, T, -1
         )  # (B*T, d_model)
 
-        # Initialize decay parameters - all should use batch_size (B*T)
-        decay_alpha_action = r_action  # (B*T, n_sync_act)
-        decay_beta_action = r_action  # (B*T, n_sync_act)
-        decay_alpha_out = r_out  # (B*T, n_sync_out)
-        decay_beta_out = r_out  # (B*T, n_sync_out)
+        # Initialize decay parameters - all should use B,T
+        decay_alpha_action = r_action  # (B, T, n_sync_act)
+        decay_beta_action = r_action  # (B, T, n_sync_act)
+        decay_alpha_out = r_out  # (B,T, n_sync_out)
+        decay_beta_out = r_out  # (B, T, n_sync_out)
 
         # Initialize synchronization
         sync_action, decay_alpha_action, decay_beta_action = self.compute_sync(
@@ -415,21 +409,16 @@ class CTM(nn.Module):
 
             # --- Interact with Data via Attention ---
             q = self.q_proj(sync_action).view(B, T, -1)  # (B*T, 1, d_input)
-            attn_out = F.scaled_dot_product_attention(
-                q.transpose(0, 1), k.transpose(0, 1), v.transpose(0, 1), is_causal=False
-            ).transpose(
-                0, 1
-            )  # transpose for expected layer
-
+            attn_out = F.scaled_dot_product_attention(q, k, v, is_causal=False)
             # --- Synaptic Network Processing ---
             synapse_input = torch.cat(
-                (attn_out.flatten(0, 1), activated_state), dim=-1
+                (attn_out, activated_state), dim=-1
             )  # (B*T, d_input + d_model)
             state = self.synnet(synapse_input)  # (B*T, d_model)
 
             # --- Update Memory with Pre-activations ---
             state_trace = torch.cat(
-                (state_trace[:, :, 1:], state.unsqueeze(-1)), dim=-1
+                (state_trace[:, :, :, 1:], state.unsqueeze(-1)), dim=-1
             )  # (B*T, d_model, memory_length)
 
             # --- Neuron-Level Model Processing ---
@@ -446,7 +435,7 @@ class CTM(nn.Module):
             )  # sync_out: (B*T, n_sync_out)
 
             # --- Get CTM Predictions and Certainties ---
-            ctm_prediction = self.ouput_proj(sync_out)  # (B*T, d_model)
+            ctm_prediction = self.ouput_proj(sync_out)  # (B,T, d_model)
             ctm_logits = self.GPT.lm_head(
                 ctm_prediction
             )  # (B*T, vocab_size) project predictionto vocab size
@@ -454,16 +443,15 @@ class CTM(nn.Module):
 
             # --- Skip Connection: Mix GPT-2 logits with CTM predictions ---
             # Skip add gpt2 weights and layernorm
-            # Mixing log probs rather than weights
-            tau = 1.0
-            p_ctm = F.softmax(ctm_logits / tau, dim=-1)
-            p_gpt = F.softmax(gptlogits.flatten(0, 1) / tau, dim=-1)
+            # Mixing log probs rather than weights\
             alpha = torch.sigmoid(self.skip_weight)
-            p = alpha * self.ctmlogitscale * p_ctm + (1 - alpha) * p_gpt
+            # print("PCTM, pgpt", p_ctm.shape, p_gpt.shape)
+            prediction = (
+                alpha * self.ctmlogitscale * ctm_logits + (1 - alpha) * gptlogits
+            )
 
-            current_prediction = torch.log(p + 1e-12)
+            predictions[..., stepi] = prediction
 
-            predictions[..., stepi] = current_prediction
             certainties[..., stepi] = current_certainty
 
             # pre_activations_tracking.append(
@@ -473,14 +461,13 @@ class CTM(nn.Module):
             # synch_out_tracking.append(sync_out.detach().cpu().numpy())
             # synch_action_tracking.append(sync_action.detach().cpu().numpy())
             # loss, ce_loss = self.calc_loss(predictions, certainties, targets)
-        return (
-            predictions,
-            certainties,
-            # (np.array(synch_out_tracking), np.array(synch_action_tracking)),
-            # np.array(pre_activations_tracking),
-            # np.array(post_activations_tracking),
-            # np.array(attention_tracking),
-        )
+        # print("predictions", predictions.shape)
+        return predictions, certainties
+        # certainties,
+        # (np.array(synch_out_tracking), np.array(synch_action_tracking)),
+        # np.array(pre_activations_tracking),
+        # np.array(post_activations_tracking),
+        # np.array(attention_tracking),
 
     def calc_loss(self, predictions, certainties, targets):
         """
@@ -490,95 +477,101 @@ class CTM(nn.Module):
         """
         assert targets is not None
 
-        # predictions shape: (B*T, D, iterations)
+        # predictions shape: (B, T, D, iterations)
         # We need to project to vocab size for each iteration
-        batch_size = predictions.size(0)  # B*T
+        B, T = predictions.size(0), predictions.size(1)
+        # print("losscalc", B, T, predictions.shape, targets.shape)
 
         # Project predictions to vocabulary size for each iteration
         # Reshape to (B*T * iterations, D) -> apply lm_head -> reshape back
-        predictions_reshaped = predictions.permute(
-            0, 2, 1
-        ).contiguous()  # (B*T, iterations, vocab_size)
-        predictions_reshaped = predictions_reshaped.view(
-            -1, self.d_model
-        )  # (B*T * iterations, vocab_size)
 
-        # # Apply language model head to get logits
-        # logits = self.GPT.lm_head(
-        #     predictions_reshaped
-        # )  # (B*T * iterations, vocab_size)
-        logits = predictions_reshaped.view(
-            batch_size, self.iterations, -1
-        )  # (B*T, iterations, vocab_size)
-
-        # Prepare targets: (B, T) -> (B*T,) and repeat for each iteration
-        targets_flat = targets.view(-1)  # (B*T,)
-        targets_expanded = targets_flat.unsqueeze(1).expand(
-            -1, self.iterations
+        # # Prepare targets: (B, T) -> (B, T,) and repeat for each iteration
+        targets_expanded = targets.unsqueeze(2).expand(
+            -1, -1, self.iterations
         )  # (B*T, iterations)
-
         # Calculate cross entropy loss for each sample and each iteration
         # logits: (B*T, iterations, vocab_size), targets: (B*T, iterations)
-        losses = torch.zeros(batch_size, self.iterations, device=logits.device)
-
+        losses = torch.zeros(B, T, self.iterations, device=self.device)
+        # print(targets_expanded.shape)
         for i in range(self.iterations):
-            losses[:, i] = F.cross_entropy(
-                logits[:, i, :], targets_expanded[:, i], reduction="none"
-            )
+
+            pred_flat = predictions[:, :, :, i].view(
+                -1, self.vocab_size
+            )  # (B*T, vocab_size)
+            targets_flat = targets.view(-1)  # (B*T,)
+            loss_flat = F.cross_entropy(pred_flat, targets_flat, reduction="none")
+            losses[:, :, i] = loss_flat.view(B, T)
 
         # Find the minimum loss across iterations (dim=-1) for each sample
-        min_losses, ce_loss_idx = torch.min(losses, dim=-1)  # (B*T,), (B*T,)
-        loss_ce = min_losses.mean()  # Average across all samples
+        min_losses, ce_loss_idx = torch.min(losses, dim=-1)  # (B,T,
+        loss = min_losses.mean()  # Average across all samples
 
-        # For certainty loss, use the iteration with highest certainty
+        # # For certainty loss, use the iteration with highest certainty
         certainty_scores = certainties[:, 1, :]  # (B*T, iterations) - confidence scores
         _, certainty_loss_idx = torch.max(certainty_scores, dim=-1)  # (B*T,)
 
-        # Get losses at certainty-based indices
+        # # Get losses at certainty-based indices
         certainty_losses = losses.gather(1, certainty_loss_idx.unsqueeze(1)).squeeze(
             1
         )  # (B*T,)
         loss_certainty = certainty_losses.mean()
 
-        # Combined loss
-        loss = (loss_ce + loss_certainty) / 2
+        # # Combined loss
+        loss = (loss + loss_certainty) / 2
 
-        return loss, ce_loss_idx
+        return loss
 
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
         """
-        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
-        the sequence max_new_tokens times, feeding the predictions back into the model each time.
-        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
+        Generate new tokens autoregressively from an input sequence of indices.
+
+        Args:
+            idx (LongTensor): Input sequence of shape (B, T).
+            max_new_tokens (int): Number of new tokens to generate.
+            temperature (float): Sampling temperature (default: 1.0).
+            top_k (int, optional): If specified, sample from top-k tokens.
+
+        Returns:
+            LongTensor: Generated sequence of shape (B, T + max_new_tokens).
         """
-        self.eval()  # Set the model to evaluation mode
+        if max_new_tokens < 0:
+            raise ValueError("max_new_tokens must be non-negative")
+        if idx.size(1) == 0:
+            raise ValueError("Input sequence cannot be empty")
+
+        self.eval()  # Set to evaluation mode
         for _ in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at block_size
+            # Crop input to block_size
             idx_cond = (
                 idx
                 if idx.size(1) <= self.args.block_size
                 else idx[:, -self.args.block_size :]
             )
-            # forward the model to get the logits for the index in the sequence
-            logits, _ = self(idx_cond, targets=None)
-            # pluck the logits at the final step and scale by desired temperature
-            # Handle batch dimension expansion - take only first batch element
-            logits = (
-                logits[0:1, -1, :] / temperature
-            )  # Keep batch dim=1 consistent with idx
-            # optionally crop the logits to only the top k options
+
+            # Forward pass
+            logits, _ = self(
+                idx_cond, targets=None
+            )  # Shape: (B, T, vocab_size, iterations)
+
+            # Select logits from the last time step and last iteration
+            logits = logits[:, -1, :, -1] / temperature  # Shape: (B, vocab_size)
+
+            # Optional top-k sampling
             if top_k is not None:
-                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits < v[:, [-1]]] = -float("Inf")
-            # apply softmax to convert logits to (normalized) probabilities
+                top_k = min(top_k, logits.size(-1))
+                if top_k > 0:
+                    v, _ = torch.topk(logits, top_k)
+                    logits[logits < v[:, -1:]] = -float("Inf")
+
+            # Convert to probabilities and sample
             probs = F.softmax(logits, dim=-1)
-            # sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1)
-            # append sampled index to the running sequence and continue
+            idx_next = torch.multinomial(probs, num_samples=1)  # Shape: (B, 1)
+
+            # Append new token
             idx = torch.cat((idx, idx_next), dim=1)
 
-        self.train()  # Set the model back to training mode
+        self.train()  # Restore training mode
         return idx
 
 

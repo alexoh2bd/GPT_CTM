@@ -45,7 +45,7 @@ python src/data/ingestion.py
 
 ```bash
 cd src/models/model1
-python train.py --iterations 20 --num_batches 40000 --batch_size 4  --block_size 512 --device cuda
+python train.py --iterations 20 --num_batches 40000 --batch_size 2  --block_size 256 --total_batch_size 2048 --device cuda
 ```
 
 ### Key Training Arguments
