@@ -353,6 +353,8 @@ class CTM(nn.Module):
             x, targets
         )  # (B,T, Vocab_size), loss, (B, T, D)
 
+        # gpt
+
         # compute positional encodings and add to properly implement key value pairs for future attention
         pos = torch.arange(0, T, dtype=torch.long, device=x.device)  # shape (T)
         pos_enc = self.GPT.transformer.wpe(pos)
@@ -407,9 +409,11 @@ class CTM(nn.Module):
                 "action",
             )
 
-            # --- Interact with Data via Attention ---
+            # --- Interact with features via Attention ---
             q = self.q_proj(sync_action).view(B, T, -1)  # (B*T, 1, d_input)
-            attn_out = F.scaled_dot_product_attention(q, k, v, is_causal=False)
+            attn_out = F.scaled_dot_product_attention(q, gptfeatures, gptfeatures, is_causal=False)
+
+
             # --- Synaptic Network Processing ---
             synapse_input = torch.cat(
                 (attn_out, activated_state), dim=-1
@@ -420,6 +424,7 @@ class CTM(nn.Module):
             state_trace = torch.cat(
                 (state_trace[:, :, :, 1:], state.unsqueeze(-1)), dim=-1
             )  # (B*T, d_model, memory_length)
+
 
             # --- Neuron-Level Model Processing ---
             # NLM expects (B*T, memory_length, d_model) format

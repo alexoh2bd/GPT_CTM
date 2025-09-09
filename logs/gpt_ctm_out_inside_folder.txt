@@ -1,0 +1,286 @@
+GPU: NVIDIA RTX A5000
+GPU Memory: 25.3 GB
+Loading weights from pretrained gpt: gpt2
+Pulled Pretrained Weights from HuggingFace
+2025-09-02 18:01:13,969 | INFO | Dummy RUN!
+2025-09-02 18:01:16,000 | INFO | CTM Model: 167,427,070 parameters
+2025-09-02 18:01:16,000 | INFO | Device: cuda
+2025-09-02 18:01:16,000 | INFO | Batch size: 2, Sequence length: 256
+2025-09-02 18:01:16,000 | INFO | Gradient accumulation steps: 4
+2025-09-02 18:01:16,000 | INFO | Effective batch size: 2048
+2025-09-02 18:01:16,012 | INFO |  DataLoader:(data is none)
+2025-09-02 18:01:16,012 | INFO | Reading file train_chunk_0000.parquet
+2025-09-02 18:01:33,542 | INFO |  DataLoader:(data is none)
+2025-09-02 18:01:33,542 | INFO | Reading file validation_chunk_0000.parquet
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover+0$#--+$1!"*'31%241&$(!-#%!2.%&)."&"2+0,"#)0&0*$*2
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is&!)+43)0"/!-,3%/.$3)'&$4))0$$'".3*33),/(/!*(4(13*2
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are3$0)/)",).-2*#!%-4+$+('&.%)/.'043.0&4"4&$-4-#4+*&!
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was/'&#-3),3!*(304!13!.#/2(-+,0#%('%-#'3..$1'"$-3$$,'
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:",'%)0..,230#"+0!)2&+311'+%,0+,+.-,''314""0*&*1!(2
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:03../.2+)03($0/'/'142/%+21$&24)$1"%',,"*#!(3&'1"(/
+2025-09-02 18:01:46,841 | INFO | New best model saved. Val loss: 7.2892
+If a train travels at 60 miles per hour for 2 hours, it will cover+0$#--+$1!"*'31%241&$(!-#%!2.%&)."&"2+0,"#)0&0*$*2
+The capital of Japan is&!)+43)0"/!-,3%/.$3)'&$4))0$$'".3*33),/(/!*(4(13*2
+The first 5 prime numbers are3$0)/)",).-2*#!%-4+$+('&.%)/.'043.0&4"4&$-4-#4+*&!
+In a distant future, humans discovered a way to travel faster than light. The first mission was/'&#-3),3!*(304!13!.#/2(-+,0#%('%-#'3..$1'"$-3$$,'
+Human: Hello, who are you? 
+AI:",'%)0..,230#"+0!)2&+311'+%,0+,+.-,''314""0*&*1!(2
+Write a recipe for a simple sandwich using only three ingredients:03../.2+)03($0/'/'142/%+21$&24)$1"%',,"*#!(3&'1"(/
+
+2025-09-02 18:01:46,861 | INFO | Step    0 | Train Loss: 7.5131 | LR: 3.00e-06 | dt: 17531.7ms | tok/s: 117
+2025-09-02 18:01:46,884 | INFO | Val Loss: 7.2892
+2025-09-02 18:06:22,876 | INFO | Step   50 | Train Loss: 6.6903 | LR: 1.53e-04 | dt: 5523.7ms | tok/s: 371
+2025-09-02 18:06:22,910 | INFO | Val Loss: 7.2892
+2025-09-02 18:10:59,630 | INFO | Step  100 | Train Loss: 5.3618 | LR: 3.03e-04 | dt: 5511.1ms | tok/s: 372
+2025-09-02 18:10:59,641 | INFO | Val Loss: 7.2892
+2025-09-02 18:15:36,695 | INFO | Step  150 | Train Loss: 4.7308 | LR: 4.53e-04 | dt: 5507.1ms | tok/s: 372
+2025-09-02 18:15:36,711 | INFO | Val Loss: 7.2892
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover1)(!0#)0&/3).31!.*#)%*32)#0(/1.,$),$-&)+,,"/%.*''-
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is-!!1),%4'1"/0'.4,-3(+.3'$!221.$4)!2"30)'$(#'1/$#33
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are(.+!342--2*$!3/21)!12'22&3#1)(")$%.31%-/2*%$1-),(/
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was+"$-.#0%%)$.&20"0%!,"00!"11(//-,--$0%%."-/''1%3(-&
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:',"$-*$+$,.%,/"2.&23,!+%,+1-&.!&((,+.$-./"#-)/*+#1
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:/#*440%-33"'/0%2**+0,1,%/$$.4'*/&*'1"*&%%#4&",0"+'
+2025-09-02 18:20:30,346 | INFO | New best model saved. Val loss: 6.0839
+If a train travels at 60 miles per hour for 2 hours, it will cover1)(!0#)0&/3).31!.*#)%*32)#0(/1.,$),$-&)+,,"/%.*''-
+The capital of Japan is-!!1),%4'1"/0'.4,-3(+.3'$!221.$4)!2"30)'$(#'1/$#33
+The first 5 prime numbers are(.+!342--2*$!3/21)!12'22&3#1)(")$%.31%-/2*%$1-),(/
+In a distant future, humans discovered a way to travel faster than light. The first mission was+"$-.#0%%)$.&20"0%!,"00!"11(//-,--$0%%."-/''1%3(-&
+Human: Hello, who are you? 
+AI:',"$-*$+$,.%,/"2.&23,!+%,+1-&.!&((,+.$-./"#-)/*+#1
+Write a recipe for a simple sandwich using only three ingredients:/#*440%-33"'/0%2**+0,1,%/$$.4'*/&*'1"*&%%#4&",0"+'
+
+2025-09-02 18:20:30,448 | INFO | Step  200 | Train Loss: 5.4509 | LR: 6.00e-05 | dt: 5490.3ms | tok/s: 373
+2025-09-02 18:20:30,448 | INFO | Val Loss: 6.0839
+2025-09-02 18:25:09,409 | INFO | Step  250 | Train Loss: 5.4855 | LR: 6.00e-05 | dt: 5542.6ms | tok/s: 370
+2025-09-02 18:25:09,419 | INFO | Val Loss: 6.0839
+2025-09-02 18:29:48,862 | INFO | Step  300 | Train Loss: 4.8189 | LR: 6.00e-05 | dt: 5454.7ms | tok/s: 375
+2025-09-02 18:29:48,872 | INFO | Val Loss: 6.0839
+2025-09-02 18:34:27,560 | INFO | Step  350 | Train Loss: 4.3307 | LR: 6.00e-05 | dt: 5469.1ms | tok/s: 374
+2025-09-02 18:34:27,569 | INFO | Val Loss: 6.0839
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover0%$%"#!)41&,!43/-,1,*32($%3/1($".*$+1)-%*441$-#'"0
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is1"0+4-/2/!)31-.0"0&/1/))!%(#,,)*)'.3!3/1!201132#,*
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are0#'.1.,,-2+/-"+/("#+%'/)&(2&&!-10+$)$0-1$"..)/&#2'
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was)./)$/!4..3#2+"&#+(.&'(3#(2,++1&)'4"'"4()1,3&1&$3#
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:4$*312$-(&*+"0,'//2)+%'*$""4'0')(!(&#+"1&43($-+20-
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:.+3.,1%"!)$1/)$/0)#-"&)1%&#&#'!1,*#.%!()0-($30'.!1
+2025-09-02 18:39:19,444 | INFO | New best model saved. Val loss: 5.8480
+If a train travels at 60 miles per hour for 2 hours, it will cover0%$%"#!)41&,!43/-,1,*32($%3/1($".*$+1)-%*441$-#'"0
+The capital of Japan is1"0+4-/2/!)31-.0"0&/1/))!%(#,,)*)'.3!3/1!201132#,*
+The first 5 prime numbers are0#'.1.,,-2+/-"+/("#+%'/)&(2&&!-10+$)$0-1$"..)/&#2'
+In a distant future, humans discovered a way to travel faster than light. The first mission was)./)$/!4..3#2+"&#+(.&'(3#(2,++1&)'4"'"4()1,3&1&$3#
+Human: Hello, who are you? 
+AI:4$*312$-(&*+"0,'//2)+%'*$""4'0')(!(&#+"1&43($-+20-
+Write a recipe for a simple sandwich using only three ingredients:.+3.,1%"!)$1/)$/0)#-"&)1%&#&#'!1,*#.%!()0-($30'.!1
+
+2025-09-02 18:39:19,535 | INFO | Step  400 | Train Loss: 5.2284 | LR: 6.00e-05 | dt: 5496.2ms | tok/s: 373
+2025-09-02 18:39:19,535 | INFO | Val Loss: 5.8480
+2025-09-02 18:44:00,311 | INFO | Step  450 | Train Loss: 4.8876 | LR: 6.00e-05 | dt: 5549.5ms | tok/s: 369
+2025-09-02 18:44:00,320 | INFO | Val Loss: 5.8480
+2025-09-02 18:48:39,479 | INFO | Step  500 | Train Loss: 5.1023 | LR: 6.00e-05 | dt: 5541.5ms | tok/s: 370
+2025-09-02 18:48:39,495 | INFO | Val Loss: 5.8480
+2025-09-02 18:53:19,689 | INFO | Step  550 | Train Loss: 4.9587 | LR: 6.00e-05 | dt: 5562.8ms | tok/s: 368
+2025-09-02 18:53:19,698 | INFO | Val Loss: 5.8480
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover"4)0,0-$)(1-,&"#24&)12"0&)01&!-4&0&-$&0&),"+"4#/)2
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is/+,"-!/3$+4'(.$&+!-!."+)/3)&(!(1(4+%(4%$*3#%+-&'!%
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are*.3(-+().+$'30.%+-%&&*$'30.*&++$.&*.*#&0(*3,(,4'&4
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was411,$2*!'"$"4/#(2,!&43-'0+(.30,-02$4-#'%&'&'..#$%'
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:+$3"*#3+0/-3,'(,/-&%!'2#&3#-0%..,$'%3+(**!#!03"21+
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:&3).%&(1!%&'03#0$(($331!'-+#!3'#-/11,+#+*#4")213((
+2025-09-02 18:58:12,156 | INFO | New best model saved. Val loss: 5.6707
+If a train travels at 60 miles per hour for 2 hours, it will cover"4)0,0-$)(1-,&"#24&)12"0&)01&!-4&0&-$&0&),"+"4#/)2
+The capital of Japan is/+,"-!/3$+4'(.$&+!-!."+)/3)&(!(1(4+%(4%$*3#%+-&'!%
+The first 5 prime numbers are*.3(-+().+$'30.%+-%&&*$'30.*&++$.&*.*#&0(*3,(,4'&4
+In a distant future, humans discovered a way to travel faster than light. The first mission was411,$2*!'"$"4/#(2,!&43-'0+(.30,-02$4-#'%&'&'..#$%'
+Human: Hello, who are you? 
+AI:+$3"*#3+0/-3,'(,/-&%!'2#&3#-0%..,$'%3+(**!#!03"21+
+Write a recipe for a simple sandwich using only three ingredients:&3).%&(1!%&'03#0$(($331!'-+#!3'#-/11,+#+*#4")213((
+
+2025-09-02 18:58:12,163 | INFO | Step  600 | Train Loss: 4.7887 | LR: 6.00e-05 | dt: 5564.6ms | tok/s: 368
+2025-09-02 18:58:12,163 | INFO | Val Loss: 5.6707
+2025-09-02 19:02:50,952 | INFO | Step  650 | Train Loss: 5.2206 | LR: 6.00e-05 | dt: 5550.5ms | tok/s: 369
+2025-09-02 19:02:50,964 | INFO | Val Loss: 5.6707
+2025-09-02 19:07:29,745 | INFO | Step  700 | Train Loss: 5.1401 | LR: 6.00e-05 | dt: 5493.5ms | tok/s: 373
+2025-09-02 19:07:29,754 | INFO | Val Loss: 5.6707
+2025-09-02 19:12:09,200 | INFO | Step  750 | Train Loss: 4.7449 | LR: 6.00e-05 | dt: 5500.4ms | tok/s: 372
+2025-09-02 19:12:09,210 | INFO | Val Loss: 5.6707
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover(,)-.4#4/#00#3-,#/2/#*!)#0'##1-,(2%,.')334&22+%%%)
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is4,*4+03',2.),22#/%"-&+,2#/*+%-,!4!((*!+.+/$0+#+3.$
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are*$10,.0$%/-2(,11.!.&0)2(,".)--$2'&4,$#*,!4+%#0)*2+
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was"02-.".,,2.-0$)%1)4$14)2-&0(+*1--3')""4')'*-+#-(*&
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:!%(/(%13/+,"/$!)-&#%0&+%-'/-+)(-"%,%'3*&&#%%(")2#.
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:.,)&%&'+%+(!%".'-1*!.,.)$,$&!3/.(1#%.",+/,0%!-*&#)
+2025-09-02 19:17:02,314 | INFO | New best model saved. Val loss: 5.5711
+If a train travels at 60 miles per hour for 2 hours, it will cover(,)-.4#4/#00#3-,#/2/#*!)#0'##1-,(2%,.')334&22+%%%)
+The capital of Japan is4,*4+03',2.),22#/%"-&+,2#/*+%-,!4!((*!+.+/$0+#+3.$
+The first 5 prime numbers are*$10,.0$%/-2(,11.!.&0)2(,".)--$2'&4,$#*,!4+%#0)*2+
+In a distant future, humans discovered a way to travel faster than light. The first mission was"02-.".,,2.-0$)%1)4$14)2-&0(+*1--3')""4')'*-+#-(*&
+Human: Hello, who are you? 
+AI:!%(/(%13/+,"/$!)-&#%0&+%-'/-+)(-"%,%'3*&&#%%(")2#.
+Write a recipe for a simple sandwich using only three ingredients:.,)&%&'+%+(!%".'-1*!.,.)$,$&!3/.(1#%.",+/,0%!-*&#)
+
+2025-09-02 19:17:02,319 | INFO | Step  800 | Train Loss: 4.8172 | LR: 6.00e-05 | dt: 5519.5ms | tok/s: 371
+2025-09-02 19:17:02,319 | INFO | Val Loss: 5.5711
+2025-09-02 19:21:42,078 | INFO | Step  850 | Train Loss: 5.0451 | LR: 6.00e-05 | dt: 5558.5ms | tok/s: 368
+2025-09-02 19:21:42,092 | INFO | Val Loss: 5.5711
+2025-09-02 19:26:21,265 | INFO | Step  900 | Train Loss: 4.9748 | LR: 6.00e-05 | dt: 5535.6ms | tok/s: 370
+2025-09-02 19:26:21,309 | INFO | Val Loss: 5.5711
+2025-09-02 19:31:00,409 | INFO | Step  950 | Train Loss: 4.8992 | LR: 6.00e-05 | dt: 5486.9ms | tok/s: 373
+2025-09-02 19:31:00,419 | INFO | Val Loss: 5.5711
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover+.(!43./)1(230'-%,/,.3/13"(0/#!,3-("'().'$!.'$-1$$
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is%#(./'+,,!4'-(30,112/,-40,#$4.."+2($&)41*.&/*$4+1,
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are!#+22(%34/432%'%%&+0$!'3)!"$1!,$2!*.,0!3&+&'#%!-2/
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was/%-4#'/2(*"#%)-1(.*((4-."0(2)+,/#0!&-%3$*$2!-("+3/
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:203-)4/3)3#)&02.1&%-&)!40,-$$'/.")31#$3.3$2(+"&(1%
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:.'..%-(+31()4)+33.)-+/"-'.'!4+(2-4"+!"'*)42/"02")3
+2025-09-02 19:35:51,694 | INFO | New best model saved. Val loss: 5.4850
+If a train travels at 60 miles per hour for 2 hours, it will cover+.(!43./)1(230'-%,/,.3/13"(0/#!,3-("'().'$!.'$-1$$
+The capital of Japan is%#(./'+,,!4'-(30,112/,-40,#$4.."+2($&)41*.&/*$4+1,
+The first 5 prime numbers are!#+22(%34/432%'%%&+0$!'3)!"$1!,$2!*.,0!3&+&'#%!-2/
+In a distant future, humans discovered a way to travel faster than light. The first mission was/%-4#'/2(*"#%)-1(.*((4-."0(2)+,/#0!&-%3$*$2!-("+3/
+Human: Hello, who are you? 
+AI:203-)4/3)3#)&02.1&%-&)!40,-$$'/.")31#$3.3$2(+"&(1%
+Write a recipe for a simple sandwich using only three ingredients:.'..%-(+31()4)+33.)-+/"-'.'!4+(2-4"+!"'*)42/"02")3
+
+2025-09-02 19:35:51,711 | INFO | Step 1000 | Train Loss: 4.0330 | LR: 6.00e-05 | dt: 5578.0ms | tok/s: 367
+2025-09-02 19:35:51,711 | INFO | Val Loss: 5.4850
+2025-09-02 19:35:52,330 | INFO | Checkpoint saved at step 1000
+2025-09-02 19:40:31,332 | INFO | Step 1050 | Train Loss: 4.2975 | LR: 6.00e-05 | dt: 5560.2ms | tok/s: 368
+2025-09-02 19:40:31,404 | INFO | Val Loss: 5.4850
+2025-09-02 19:45:10,273 | INFO | Step 1100 | Train Loss: 4.9965 | LR: 6.00e-05 | dt: 5515.9ms | tok/s: 371
+2025-09-02 19:45:10,285 | INFO | Val Loss: 5.4850
+2025-09-02 19:49:48,827 | INFO | Step 1150 | Train Loss: 4.7071 | LR: 6.00e-05 | dt: 5464.2ms | tok/s: 375
+2025-09-02 19:49:48,835 | INFO | Val Loss: 5.4850
+2025-09-02 19:54:30,116 | INFO | Step 1200 | Train Loss: 5.2280 | LR: 6.00e-05 | dt: 5494.6ms | tok/s: 373
+2025-09-02 19:54:30,125 | INFO | Val Loss: 5.5297
+2025-09-02 19:59:08,939 | INFO | Step 1250 | Train Loss: 5.0156 | LR: 6.00e-05 | dt: 5454.3ms | tok/s: 375
+2025-09-02 19:59:08,951 | INFO | Val Loss: 5.5297
+2025-09-02 20:03:44,126 | INFO | Step 1300 | Train Loss: 4.2492 | LR: 6.00e-05 | dt: 5449.1ms | tok/s: 376
+2025-09-02 20:03:44,136 | INFO | Val Loss: 5.5297
+2025-09-02 20:08:18,546 | INFO | Step 1350 | Train Loss: 4.8135 | LR: 6.00e-05 | dt: 5471.4ms | tok/s: 374
+2025-09-02 20:08:18,558 | INFO | Val Loss: 5.5297
+2025-09-02 20:12:55,343 | INFO | Step 1400 | Train Loss: 4.9807 | LR: 6.00e-05 | dt: 5461.2ms | tok/s: 375
+2025-09-02 20:12:55,354 | INFO | Val Loss: 5.5045
+2025-09-02 20:17:30,471 | INFO | Step 1450 | Train Loss: 4.6151 | LR: 6.00e-05 | dt: 5465.5ms | tok/s: 375
+2025-09-02 20:17:30,481 | INFO | Val Loss: 5.5045
+2025-09-02 20:22:05,935 | INFO | Step 1500 | Train Loss: 5.2365 | LR: 6.00e-05 | dt: 5500.6ms | tok/s: 372
+2025-09-02 20:22:05,945 | INFO | Val Loss: 5.5045
+2025-09-02 20:26:40,137 | INFO | Step 1550 | Train Loss: 4.6733 | LR: 6.00e-05 | dt: 5521.3ms | tok/s: 371
+2025-09-02 20:26:40,147 | INFO | Val Loss: 5.5045
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover*0!$1'),1)'"12')'.1.24*&+,!0'33%4&23-,,(..*+),0'&+
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is/0"+."0$)*+0),4&).%2(!(4(()*%#"#"'1&,//%!11$4(%".#
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are3224(.$/,23203&.".+/,)3/#*#3#$)*/.2*&$2,&"4//(1,#"
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was011%$2--40)&'&)23*",2".2)#*#)(&4++,%%,&1"3+!,!1,*)
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:1%&143$-##!&!+"+/1,4&"(3"1+(&#"/'3.#2+%0#,'%-(--)3
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:.$&%042)4%%/(04((3(()&%)!##"'/3/314,,0--(/".$*,4#0
+2025-09-02 20:31:26,829 | INFO | New best model saved. Val loss: 5.3679
+If a train travels at 60 miles per hour for 2 hours, it will cover*0!$1'),1)'"12')'.1.24*&+,!0'33%4&23-,,(..*+),0'&+
+The capital of Japan is/0"+."0$)*+0),4&).%2(!(4(()*%#"#"'1&,//%!11$4(%".#
+The first 5 prime numbers are3224(.$/,23203&.".+/,)3/#*#3#$)*/.2*&$2,&"4//(1,#"
+In a distant future, humans discovered a way to travel faster than light. The first mission was011%$2--40)&'&)23*",2".2)#*#)(&4++,%%,&1"3+!,!1,*)
+Human: Hello, who are you? 
+AI:1%&143$-##!&!+"+/1,4&"(3"1+(&#"/'3.#2+%0#,'%-(--)3
+Write a recipe for a simple sandwich using only three ingredients:.$&%042)4%%/(04((3(()&%)!##"'/3/314,,0--(/".$*,4#0
+
+2025-09-02 20:31:26,835 | INFO | Step 1600 | Train Loss: 4.5666 | LR: 6.00e-05 | dt: 5453.4ms | tok/s: 376
+2025-09-02 20:31:26,835 | INFO | Val Loss: 5.3679
+2025-09-02 20:36:01,876 | INFO | Step 1650 | Train Loss: 4.8056 | LR: 6.00e-05 | dt: 5471.2ms | tok/s: 374
+2025-09-02 20:36:01,888 | INFO | Val Loss: 5.3679

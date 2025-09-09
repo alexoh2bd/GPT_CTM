@@ -160,8 +160,8 @@ def main(args):
     logger.info(f"Effective batch size: {total_batch_size}")
 
     # Training loop
-    with tqdm(total=args.num_batches) as pbar:
-        for step in range(args.num_batches):
+    with tqdm(total=args.num_epochs) as pbar:
+        for step in range(args.num_epochs):
 
             t0 = time.time()
 
@@ -292,7 +292,7 @@ def main(args):
 
         # Final model save and generation demo
         final_checkpoint = build_checkpoint(
-            args.num_batches,
+            args.num_epochs,
             model.state_dict(),
             optimizer.state_dict(),
             scaler.state_dict(),
@@ -321,9 +321,9 @@ def parse_args():
     parser.add_argument("--iterations", type=int, default=12, help="CTM iterations")
     # Training parameters
     parser.add_argument(
-        "--num_batches",
+        "--num_epochs",
         type=int,
-        default=4000,
+        default=500,
         help="Total Number of batches in Training Run",
     )
     parser.add_argument(
@@ -372,7 +372,7 @@ def parse_args():
     parser.add_argument("--beta2", type=float, default=0.95, help="AdamW beta2")
 
     parser.add_argument(
-        "--val_interval", type=int, default=200, help="Validation interval"
+        "--val_interval", type=int, default=20, help="Validation interval"
     )
     parser.add_argument(
         "--val_steps", type=int, default=10, help="Number of validation steps"

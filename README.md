@@ -6,7 +6,7 @@ A PyTorch implementation of the **Continuous Thought Machine** architecture, com
 
 This repository implements and extends the Continuous Thought Machine (CTM) architecture from Sakana AI's research paper ["The Continuous Thought Machine"](https://arxiv.org/abs/2505.05522). Our implementation focuses on:
 
-- **Iterative Neural Processing**: CTM performs multiple "thinking" iterations to refine predictions
+- **Synapse Models**: CTM performs multiple "thinking" iterations to refine predictions
 - **Neuron-Level Models**: Per-neuron MLPs process memory traces for fine-grained control
 - **Synchronization as Representation**: Pairwise neuron synchronization serves as the core representation
 - **GPT-2 Integration**: Leveraging pre-trained language models as feature extractors

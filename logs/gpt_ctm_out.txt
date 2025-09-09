@@ -1,0 +1,265 @@
+GPU: NVIDIA RTX A5000
+GPU Memory: 25.3 GB
+Loading weights from pretrained gpt: gpt2
+Pulled Pretrained Weights from HuggingFace
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover a part for a part, a part it will cover a part for a part for a part for part for part for part for part for part for part for part for part for part for part for part for part for part for part for part for
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is a great place of a place of a place of a place of more of a more of a great of a great of great great of a great of a great of a great of a great of a great of a great of a great of great a
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are quite interesting numbers. We are to the the to the first. We are the first to the the first. We are the first to the first. We are the first to the first. We are the first to the first. We are first the
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was a first. The first mission was a way to a distant future, a. The first was a way. The first, first, a. The first, first, first, first. The first was a way to. The first, first,
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:
+And, you are, you are, who are you, you are, you you are, you are, you, you are, you, you are you are, are you are, you are you are you are you are you are you
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients: a: a: a: a: a: a: a: a: A: a: A: A+ A: A: A: A: A: A: A: A: A: A: A: A: A:
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover                                                  
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are                                                  
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was                                                  
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:                                                  
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:                                                  
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover                                                  
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are                                                  
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was        ,                                          
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:                                                  
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:                                                  
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  , ,                                               
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are                                                  
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:                                                  
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:                                                  
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are  ,                                                
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:                                                  
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:                                                  
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are                                                  
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:                                                  
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:                                                  
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are   ,                                               
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:                                                  
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:                                                  
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are  ,                                                
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:     ,                                             
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:                                                  
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is                                                  
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are  ,                                                
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI:  ,                                                
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:  ,                                                
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is  ,                                                
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are  ,                                                
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI: ,                                                 
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:  ,                                                
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is  ,                                                
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are  ,                                                
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI: ,                                                 
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:  ,                                                
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is  ,                                                
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are  ,                                                
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI: , .                                                
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:  ,                                                
+Prompt: If a train travels at 60 miles per hour for 2 hours, it will cover
+----------------------------------------
+If a train travels at 60 miles per hour for 2 hours, it will cover  ,                                                
+Prompt: The capital of Japan is
+----------------------------------------
+The capital of Japan is  ,                                                
+Prompt: The first 5 prime numbers are
+----------------------------------------
+The first 5 prime numbers are  ,                                                
+Prompt: In a distant future, humans discovered a way to travel faster than light. The first mission was
+----------------------------------------
+In a distant future, humans discovered a way to travel faster than light. The first mission was  ,                                                
+Prompt: Human: Hello, who are you? 
+AI:
+----------------------------------------
+Human: Hello, who are you? 
+AI: , .                                                
+Prompt: Write a recipe for a simple sandwich using only three ingredients:
+----------------------------------------
+Write a recipe for a simple sandwich using only three ingredients:  ,                                                
